@@ -1,0 +1,19 @@
+{
+  "name": "minescout",
+  "version": "1.0.0",
+  "description": "A minesweeper-inspired game where you physically control a military scout navigating a minefield. Navigate from the left edge to the right edge without getting blown up.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "vite": "^8.0.13"
+  },
+  "dependencies": {
+    "phaser": "^4.1.0"
+  }
+}
