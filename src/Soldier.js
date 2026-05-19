@@ -1,4 +1,4 @@
-import { COLS, ROWS } from './constants.js';
+import { COLS, ROWS } from "./constants.js";
 
 export class Soldier {
   constructor(col, row) {
@@ -8,13 +8,14 @@ export class Soldier {
     this.reached = false;
     this.moveTimer = 0;
     this.MOVE_INTERVAL = 3;
-    this.facing = 'right';
+    this.facing = "right";
   }
 
   step(game, dt) {
     if (!this.alive || this.reached) return;
     this.moveTimer += dt;
-    const interval = game.status === 'won' ? this.MOVE_INTERVAL / 5 : this.MOVE_INTERVAL;
+    const interval =
+      game.status === "won" ? this.MOVE_INTERVAL / 5 : this.MOVE_INTERVAL;
     if (this.moveTimer < interval) return;
     this.moveTimer -= interval;
     this._move(game);
@@ -26,10 +27,10 @@ export class Soldier {
 
     const dc = next.col - this.col;
     const dr = next.row - this.row;
-    if (dc > 0) this.facing = 'right';
-    else if (dc < 0) this.facing = 'left';
-    else if (dr < 0) this.facing = 'up';
-    else if (dr > 0) this.facing = 'down';
+    if (dc > 0) this.facing = "right";
+    else if (dc < 0) this.facing = "left";
+    else if (dr < 0) this.facing = "up";
+    else if (dr > 0) this.facing = "down";
 
     this.col = next.col;
     this.row = next.row;
@@ -37,27 +38,30 @@ export class Soldier {
     const cell = game.grid.at(this.col, this.row);
     if (cell && cell.hasMine && !cell.defused) {
       this.alive = false;
-      game.message = 'A soldier hit a mine! Clear a safer path.';
+      game.message = "Tank hit a mine! Clear a safer path.";
       game.exploded = true;
       return;
     }
     if (this.col >= COLS - 1) {
       this.reached = true;
-      game.message = 'Soldier made it across!';
+      game.message = "You made it through the minefield!";
     }
   }
 
   _nextStep(game) {
     const currentCell = game.grid.at(this.col, this.row);
-    const onClearedGround = currentCell && (currentCell.revealed || currentCell.defused);
+    const onClearedGround =
+      currentCell && (currentCell.revealed || currentCell.defused);
 
     if (onClearedGround) {
-      // BFS all reachable cleared cells; head toward the rightmost one
       const step = this._bfsRightmost(game);
+      if (step) return step;
+    } else if (game.status === "won") {
+      // Player finished — find nearest cleared cell and head for it
+      const step = this._bfsToCleared(game);
       if (step) return step;
     }
 
-    // In the minefield (or no cleared path ahead) — go straight right
     return this._greedyStep(game);
   }
 
@@ -72,14 +76,24 @@ export class Soldier {
 
     while (queue.length) {
       const node = queue.shift();
-      for (const [dc, dr] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
-        const nc = node.col + dc, nr = node.row + dr;
+      for (const [dc, dr] of [
+        [0, -1],
+        [0, 1],
+        [-1, 0],
+        [1, 0],
+      ]) {
+        const nc = node.col + dc,
+          nr = node.row + dr;
         const k = key(nc, nr);
         if (parent.has(k)) continue;
         const cell = game.grid.at(nc, nr);
         if (!cell || cell.wall || (!cell.revealed && !cell.defused)) continue;
         parent.set(k, { col: node.col, row: node.row });
-        if (nc > best.col || (nc === best.col && Math.abs(nr - this.row) < Math.abs(best.row - this.row))) {
+        if (
+          nc > best.col ||
+          (nc === best.col &&
+            Math.abs(nr - this.row) < Math.abs(best.row - this.row))
+        ) {
           best = { col: nc, row: nr };
         }
         queue.push({ col: nc, row: nr });
@@ -101,9 +115,50 @@ export class Soldier {
     return cur;
   }
 
+  // BFS through all non-wall cells to find the nearest cleared cell; returns
+  // first step toward it. Used when the tank is in the minefield after player wins.
+  _bfsToCleared(game) {
+    const key = (c, r) => r * COLS + c;
+    const parent = new Map();
+    parent.set(key(this.col, this.row), null);
+    const queue = [{ col: this.col, row: this.row }];
+
+    while (queue.length) {
+      const node = queue.shift();
+      for (const [dc, dr] of [
+        [0, -1],
+        [0, 1],
+        [-1, 0],
+        [1, 0],
+      ]) {
+        const nc = node.col + dc,
+          nr = node.row + dr;
+        const k = key(nc, nr);
+        if (parent.has(k)) continue;
+        const cell = game.grid.at(nc, nr);
+        if (!cell || cell.wall) continue;
+        parent.set(k, { col: node.col, row: node.row });
+        if (cell.revealed || cell.defused) {
+          let cur = { col: nc, row: nr };
+          let par = parent.get(key(cur.col, cur.row));
+          while (par && parent.get(key(par.col, par.row)) !== null) {
+            cur = par;
+            par = parent.get(key(cur.col, cur.row));
+          }
+          if (this._isOccupied(game, cur.col, cur.row)) return null;
+          return cur;
+        }
+        queue.push({ col: nc, row: nr });
+      }
+    }
+    return null;
+  }
+
   _isOccupied(game, col, row) {
     if (game.player.col === col && game.player.row === row) return true;
-    return game.soldiers.some(s => s !== this && s.alive && s.col === col && s.row === row);
+    return game.soldiers.some(
+      (s) => s !== this && s.alive && s.col === col && s.row === row,
+    );
   }
 
   _greedyStep(game) {
