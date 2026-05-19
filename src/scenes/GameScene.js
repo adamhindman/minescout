@@ -4,6 +4,10 @@ import { COLS, ROWS, CELL_SIZE, STATUS_BAR_H } from "../constants.js";
 import explode1 from "../sounds/mine-explode-1.mp3";
 import explode2 from "../sounds/mine-explode-2.mp3";
 import explode3 from "../sounds/mine-explode-3.mp3";
+import tankUp    from "../assets/tank up.png";
+import tankDown  from "../assets/tank down.png";
+import tankLeft  from "../assets/tank left.png";
+import tankRight from "../assets/tank right.png";
 
 const NUM_COLORS = [
   "",
@@ -34,6 +38,10 @@ export class GameScene extends Phaser.Scene {
     this.load.audio("explode1", explode1);
     this.load.audio("explode2", explode2);
     this.load.audio("explode3", explode3);
+    this.load.image("tank-up",    tankUp);
+    this.load.image("tank-down",  tankDown);
+    this.load.image("tank-left",  tankLeft);
+    this.load.image("tank-right", tankRight);
   }
 
   create() {
@@ -66,14 +74,10 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5, 0.5)
       .setDepth(1);
 
-    // Soldier label (reused for the single soldier)
-    this.soldierLabel = this.add
-      .text(0, 0, "S", {
-        fontFamily: "monospace",
-        fontSize: `${Math.floor(cs * 0.32)}px`,
-        fontStyle: "bold",
-        color: "#000000",
-      })
+    // Tank sprite (reused for the single soldier/tank)
+    this.tankSprite = this.add
+      .image(0, 0, "tank-right")
+      .setDisplaySize(cs * 0.88, cs * 0.88)
       .setOrigin(0.5, 0.5)
       .setDepth(1)
       .setVisible(false);
@@ -328,8 +332,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // --- Soldiers ---
-    const sr = cs * 0.24;
+    // --- Soldiers (tanks) ---
     let soldierRendered = false;
     for (const soldier of g.soldiers) {
       const targetSx = soldier.col * cs + cs / 2;
@@ -339,11 +342,9 @@ export class GameScene extends Phaser.Scene {
         soldier.displayY = targetSy;
       }
       if (!soldier.alive) {
-        // Snap to death position
         soldier.displayX = targetSx;
         soldier.displayY = targetSy;
       } else {
-        // Linear movement at 1 cell per MOVE_INTERVAL seconds
         const sdx = targetSx - soldier.displayX;
         const sdy = targetSy - soldier.displayY;
         const dist = Math.sqrt(sdx * sdx + sdy * sdy);
@@ -359,31 +360,16 @@ export class GameScene extends Phaser.Scene {
       const sx = soldier.displayX;
       const sy = soldier.displayY;
 
-      gfx.fillStyle(0x000000, 0.4);
-      gfx.fillEllipse(sx + 2, sy + 3, sr * 2, sr);
-
-      const soldierColor = !soldier.alive
-        ? 0xff3333
-        : soldier.reached
-          ? 0x76ff03
-          : 0x42a5f5;
-      gfx.fillStyle(soldierColor);
-      gfx.fillCircle(sx, sy, sr);
-      gfx.lineStyle(1.5, 0x000000, 0.55);
-      gfx.strokeCircle(sx, sy, sr);
-
-      const soldierLabelSize = !soldier.alive
-        ? Math.floor(cs * 0.55)
-        : Math.floor(cs * 0.32);
-      this.soldierLabel
-        .setFontSize(soldierLabelSize)
+      const textureKey = `tank-${soldier.facing}`;
+      this.tankSprite
+        .setTexture(textureKey)
         .setPosition(sx, sy)
-        .setText(!soldier.alive ? "✕" : "S")
-        .setColor("#000000")
+        .setDisplaySize(cs * 0.88, cs * 0.88)
+        .setTint(soldier.alive ? (soldier.reached ? 0x76ff03 : 0xffffff) : 0xff4444)
         .setVisible(true);
       soldierRendered = true;
     }
-    if (!soldierRendered) this.soldierLabel.setVisible(false);
+    if (!soldierRendered) this.tankSprite.setVisible(false);
 
     // --- Player ---
     const targetPx = player.col * cs + cs / 2;

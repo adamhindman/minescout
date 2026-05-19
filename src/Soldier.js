@@ -8,6 +8,7 @@ export class Soldier {
     this.reached = false;
     this.moveTimer = 0;
     this.MOVE_INTERVAL = 3;
+    this.facing = 'right';
   }
 
   step(game, dt) {
@@ -21,6 +22,13 @@ export class Soldier {
   _move(game) {
     const next = this._nextStep(game);
     if (!next) return;
+
+    const dc = next.col - this.col;
+    const dr = next.row - this.row;
+    if (dc > 0) this.facing = 'right';
+    else if (dc < 0) this.facing = 'left';
+    else if (dr < 0) this.facing = 'up';
+    else if (dr > 0) this.facing = 'down';
 
     this.col = next.col;
     this.row = next.row;
