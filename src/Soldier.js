@@ -14,8 +14,9 @@ export class Soldier {
   step(game, dt) {
     if (!this.alive || this.reached) return;
     this.moveTimer += dt;
-    if (this.moveTimer < this.MOVE_INTERVAL) return;
-    this.moveTimer -= this.MOVE_INTERVAL;
+    const interval = game.status === 'won' ? this.MOVE_INTERVAL / 5 : this.MOVE_INTERVAL;
+    if (this.moveTimer < interval) return;
+    this.moveTimer -= interval;
     this._move(game);
   }
 

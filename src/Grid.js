@@ -24,7 +24,7 @@ export class Grid {
 
   _isSafeZone(col, row) {
     const startRow = Math.floor(ROWS / 2);
-    return col <= 1 && row >= startRow - 1 && row <= startRow;
+    return col <= 1 && row >= startRow - 1 && row <= startRow + 1;
   }
 
   _placeWalls(wallCount = 10) {

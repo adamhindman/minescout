@@ -4,9 +4,9 @@ import { COLS, ROWS, CELL_SIZE, STATUS_BAR_H } from "../constants.js";
 import explode1 from "../sounds/mine-explode-1.mp3";
 import explode2 from "../sounds/mine-explode-2.mp3";
 import explode3 from "../sounds/mine-explode-3.mp3";
-import tankUp    from "../assets/tank up.png";
-import tankDown  from "../assets/tank down.png";
-import tankLeft  from "../assets/tank left.png";
+import tankUp from "../assets/tank up.png";
+import tankDown from "../assets/tank down.png";
+import tankLeft from "../assets/tank left.png";
 import tankRight from "../assets/tank right.png";
 
 const NUM_COLORS = [
@@ -38,9 +38,9 @@ export class GameScene extends Phaser.Scene {
     this.load.audio("explode1", explode1);
     this.load.audio("explode2", explode2);
     this.load.audio("explode3", explode3);
-    this.load.image("tank-up",    tankUp);
-    this.load.image("tank-down",  tankDown);
-    this.load.image("tank-left",  tankLeft);
+    this.load.image("tank-up", tankUp);
+    this.load.image("tank-down", tankDown);
+    this.load.image("tank-left", tankLeft);
     this.load.image("tank-right", tankRight);
   }
 
@@ -176,10 +176,89 @@ export class GameScene extends Phaser.Scene {
 
     this.input.on("pointerdown", (pointer) => {
       if (!this.gs.defuseMode) return;
-      const col = Math.floor(pointer.x / cs);
-      const row = Math.floor(pointer.y / cs);
+      const col = Math.floor((pointer.x + this.cameras.main.scrollX) / cs);
+      const row = Math.floor((pointer.y + this.cameras.main.scrollY) / cs);
       if (row < 0 || row >= ROWS) return;
       this.gs.clickCell(col, row);
+    });
+
+    this._setupTouchInput();
+  }
+
+  _setupTouchInput() {
+    const ptrs = new Map(); // pointerId → { startX, startY, lastX, lastY, panned }
+    let lastTapTime = 0, lastTapX = 0, lastTapY = 0;
+
+    const clampCamera = () => {
+      const cam = this.cameras.main;
+      const worldH = barY + STATUS_BAR_H;
+      cam.scrollX = Math.max(0, Math.min(Math.max(0, W - cam.width),  cam.scrollX));
+      cam.scrollY = Math.max(0, Math.min(Math.max(0, worldH - cam.height), cam.scrollY));
+    };
+
+    const toGrid = (screenX, screenY) => ({
+      col: Math.floor((screenX + this.cameras.main.scrollX) / cs),
+      row: Math.floor((screenY + this.cameras.main.scrollY) / cs),
+    });
+
+    this.input.on("pointerdown", (pointer) => {
+      ptrs.set(pointer.id, {
+        startX: pointer.x, startY: pointer.y,
+        lastX:  pointer.x, lastY:  pointer.y,
+        panned: false,
+      });
+      // Any finger joining a 2+-finger touch marks all as pan-only
+      if (ptrs.size >= 2) for (const p of ptrs.values()) p.panned = true;
+    });
+
+    this.input.on("pointermove", (pointer) => {
+      const p = ptrs.get(pointer.id);
+      if (!p) return;
+      if (p.panned) {
+        const cam = this.cameras.main;
+        cam.scrollX -= pointer.x - p.lastX;
+        cam.scrollY -= pointer.y - p.lastY;
+        clampCamera();
+      }
+      p.lastX = pointer.x;
+      p.lastY = pointer.y;
+    });
+
+    this.input.on("pointerup", (pointer) => {
+      const p = ptrs.get(pointer.id);
+      ptrs.delete(pointer.id);
+      if (!p || p.panned) return;
+
+      const dx = pointer.x - p.startX;
+      const dy = pointer.y - p.startY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const now = Date.now();
+
+      if (dist < 20) {
+        // Tap — check for double-tap
+        const isDouble =
+          now - lastTapTime < 300 &&
+          Math.abs(pointer.x - lastTapX) < 50 &&
+          Math.abs(pointer.y - lastTapY) < 50;
+
+        if (isDouble) {
+          lastTapTime = 0;
+          const { col, row } = toGrid(pointer.x, pointer.y);
+          if (this.gs.player.isAdjacentTo(col, row)) {
+            if (!this.gs.defuseMode) this.gs.enterDefuse();
+            this.gs.defuseCursor = { col, row };
+            this.gs.confirmDefuse();
+          }
+        } else {
+          lastTapTime = now;
+          lastTapX = pointer.x;
+          lastTapY = pointer.y;
+        }
+      } else if (dist >= 25) {
+        // Swipe — move player one cell in dominant direction
+        if (Math.abs(dx) >= Math.abs(dy)) this.gs.move(dx > 0 ? 1 : -1, 0);
+        else this.gs.move(0, dy > 0 ? 1 : -1);
+      }
     });
   }
 
@@ -225,6 +304,7 @@ export class GameScene extends Phaser.Scene {
         const isDefusable =
           defuseMode &&
           isAdjacent &&
+          !cell.wall &&
           !cell.revealed &&
           !cell.defused &&
           !isPlayerHere;
@@ -365,7 +445,9 @@ export class GameScene extends Phaser.Scene {
         .setTexture(textureKey)
         .setPosition(sx, sy)
         .setDisplaySize(cs * 0.88, cs * 0.88)
-        .setTint(soldier.alive ? (soldier.reached ? 0x76ff03 : 0xffffff) : 0xff4444)
+        .setTint(
+          soldier.alive ? (soldier.reached ? 0x76ff03 : 0xffffff) : 0xff4444,
+        )
         .setVisible(true);
       soldierRendered = true;
     }
@@ -452,7 +534,7 @@ export class GameScene extends Phaser.Scene {
       g.squadTimer > 0
     ) {
       const secs = Math.ceil(g.squadTimer);
-      this.countdownText.setText(`Squad arrives in ${secs}s`).setVisible(true);
+      this.countdownText.setText(`Tank arrives in ${secs}s`).setVisible(true);
     } else {
       this.countdownText.setVisible(false);
     }

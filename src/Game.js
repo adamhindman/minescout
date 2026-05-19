@@ -72,9 +72,9 @@ export class Game {
   }
 
   update(dt) {
-    if (this.status !== "playing") return;
+    if (this.status === "lost") return;
 
-    if (this.soldiers.length === 0 && this.playerMoved) {
+    if (this.status === 'playing' && this.soldiers.length === 0 && this.playerMoved) {
       this.squadTimer -= dt;
       if (this.squadTimer <= 0) {
         this.soldiers.push(new Soldier(0, Math.floor(ROWS / 2)));
@@ -122,7 +122,7 @@ export class Game {
       const col = this.player.col + dc;
       const row = this.player.row + dr;
       const cell = this.grid.at(col, row);
-      if (cell && !cell.revealed && !cell.defused) return { col, row };
+      if (cell && !cell.wall && !cell.revealed && !cell.defused) return { col, row };
     }
     return null;
   }
@@ -132,7 +132,8 @@ export class Game {
     if (!this.defuseCursor) {
       const col = this.player.col + dk_dc;
       const row = this.player.row + dk_dr;
-      if (this.grid.at(col, row) && this.player.isAdjacentTo(col, row)) {
+      const c = this.grid.at(col, row);
+      if (c && !c.wall && this.player.isAdjacentTo(col, row)) {
         this.defuseCursor = { col, row };
       }
       return;
@@ -144,7 +145,8 @@ export class Game {
     if (new_dc === 0 && new_dr === 0) return;
     const col = this.player.col + new_dc;
     const row = this.player.row + new_dr;
-    if (this.grid.at(col, row)) this.defuseCursor = { col, row };
+    const nc = this.grid.at(col, row);
+    if (nc && !nc.wall) this.defuseCursor = { col, row };
   }
 
   confirmDefuse() {
