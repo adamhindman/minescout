@@ -41,7 +41,7 @@ export class GameScene extends Phaser.Scene {
     // Corner count on the player's current cell
     this.cornerCount = this.add.text(0, 0, '', {
       fontFamily: 'monospace',
-      fontSize: `${Math.floor(cs * 0.5)}px`,
+      fontSize: `${Math.floor(cs * 0.32)}px`,
       fontStyle: 'bold',
     }).setOrigin(1, 0).setDepth(1).setVisible(false);
 
