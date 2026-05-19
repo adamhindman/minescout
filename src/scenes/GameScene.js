@@ -100,8 +100,15 @@ export class GameScene extends Phaser.Scene {
     keyEnter.on('down', () => this.gs.confirmDefuse());
     keyEsc.on('down',   () => { if (this.gs.defuseMode) this.gs.exitDefuse(); });
 
-    keyShift.on('down', () => this.gs.enterDefuse());
-    keyShift.on('up',   () => { if (this.gs.defuseMode) this.gs.exitDefuse(); });
+    keyShift.on('down', () => this.gs.toggleDefuse());
+
+    this.input.on('pointerdown', (pointer) => {
+      if (!this.gs.defuseMode) return;
+      const col = Math.floor(pointer.x / cs);
+      const row = Math.floor(pointer.y / cs);
+      if (row < 0 || row >= ROWS) return;
+      this.gs.clickCell(col, row);
+    });
   }
 
   update(time, delta) {
