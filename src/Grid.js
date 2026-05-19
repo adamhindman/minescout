@@ -21,11 +21,13 @@ export class Grid {
   }
 
   _placeMines(mineCount) {
+    const startRow = Math.floor(ROWS / 2);
     let placed = 0;
     while (placed < mineCount) {
-      // Safe zones: cols 0–1 (start) and col COLS-1 (goal)
-      const col = 2 + Math.floor(Math.random() * (COLS - 3));
+      const col = Math.floor(Math.random() * (COLS - 1)); // exclude goal col
       const row = Math.floor(Math.random() * ROWS);
+      // Safe zone: 2x2 block around start (cols 0–1, rows startRow-1 to startRow)
+      if (col <= 1 && row >= startRow - 1 && row <= startRow) continue;
       if (!this.cells[row][col].hasMine) {
         this.cells[row][col].hasMine = true;
         placed++;

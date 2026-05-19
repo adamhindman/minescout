@@ -38,6 +38,14 @@ export class GameScene extends Phaser.Scene {
       color: '#000000',
     }).setOrigin(0.5, 0.5).setDepth(1);
 
+    // Soldier label (reused for the single soldier)
+    this.soldierLabel = this.add.text(0, 0, 'S', {
+      fontFamily: 'monospace',
+      fontSize: `${Math.floor(cs * 0.32)}px`,
+      fontStyle: 'bold',
+      color: '#000000',
+    }).setOrigin(0.5, 0.5).setDepth(1).setVisible(false);
+
     // Corner count on the player's current cell
     this.cornerCount = this.add.text(0, 0, '', {
       fontFamily: 'monospace',
@@ -56,6 +64,10 @@ export class GameScene extends Phaser.Scene {
 
     this.restartHint = this.add.text(W - 12, barY + 30, 'Press R to restart',
       { fontFamily: 'monospace', fontSize: '11px', color: '#ffd600' }
+    ).setOrigin(1, 0).setVisible(false);
+
+    this.countdownText = this.add.text(W - 12, barY + 10, '',
+      { fontFamily: 'monospace', fontSize: '11px', color: '#ef9a9a' }
     ).setOrigin(1, 0).setVisible(false);
 
     this._setupInput();
@@ -90,14 +102,15 @@ export class GameScene extends Phaser.Scene {
 
     keyShift.on('down', () => this.gs.enterDefuse());
     keyShift.on('up',   () => { if (this.gs.defuseMode) this.gs.exitDefuse(); });
-
   }
 
-  update() {
-    this._render(this.gs);
+  update(time, delta) {
+    const dt = delta / 1000;
+    this.gs.update(dt);
+    this._render(this.gs, dt);
   }
 
-  _render(g) {
+  _render(g, dt = 0) {
     const gfx = this.gfx;
     const { player, defuseMode, defuseCursor } = g;
 
@@ -172,9 +185,58 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    // --- Soldiers ---
+    const sr = cs * 0.24;
+    let soldierRendered = false;
+    for (const soldier of g.soldiers) {
+      const targetSx = soldier.col * cs + cs / 2;
+      const targetSy = soldier.row * cs + cs / 2;
+      if (soldier.displayX === undefined) { soldier.displayX = targetSx; soldier.displayY = targetSy; }
+      if (!soldier.alive) {
+        // Snap to death position
+        soldier.displayX = targetSx;
+        soldier.displayY = targetSy;
+      } else {
+        // Linear movement at 1 cell per MOVE_INTERVAL seconds
+        const sdx = targetSx - soldier.displayX;
+        const sdy = targetSy - soldier.displayY;
+        const dist = Math.sqrt(sdx * sdx + sdy * sdy);
+        const step = (cs / soldier.MOVE_INTERVAL) * dt;
+        if (dist <= step) { soldier.displayX = targetSx; soldier.displayY = targetSy; }
+        else { soldier.displayX += (sdx / dist) * step; soldier.displayY += (sdy / dist) * step; }
+      }
+      const sx = soldier.displayX;
+      const sy = soldier.displayY;
+
+      gfx.fillStyle(0x000000, 0.4);
+      gfx.fillEllipse(sx + 2, sy + 3, sr * 2, sr);
+
+      const soldierColor = !soldier.alive ? 0xff3333 : soldier.reached ? 0x76ff03 : 0x42a5f5;
+      gfx.fillStyle(soldierColor);
+      gfx.fillCircle(sx, sy, sr);
+      gfx.lineStyle(1.5, 0x000000, 0.55);
+      gfx.strokeCircle(sx, sy, sr);
+
+      const soldierLabelSize = !soldier.alive ? Math.floor(cs * 0.55) : Math.floor(cs * 0.32);
+      this.soldierLabel
+        .setFontSize(soldierLabelSize)
+        .setPosition(sx, sy)
+        .setText(!soldier.alive ? '✕' : 'S')
+        .setColor('#000000')
+        .setVisible(true);
+      soldierRendered = true;
+    }
+    if (!soldierRendered) this.soldierLabel.setVisible(false);
+
     // --- Player ---
-    const px = player.col * cs + cs / 2;
-    const py = player.row * cs + cs / 2;
+    const targetPx = player.col * cs + cs / 2;
+    const targetPy = player.row * cs + cs / 2;
+    if (player.displayX === undefined) { player.displayX = targetPx; player.displayY = targetPy; }
+    const lerpT = Math.min(1, 20 * dt);
+    player.displayX += (targetPx - player.displayX) * lerpT;
+    player.displayY += (targetPy - player.displayY) * lerpT;
+    const px = player.displayX;
+    const py = player.displayY;
     const pr = cs * 0.28;
 
     gfx.fillStyle(0x000000, 0.4);
@@ -194,7 +256,7 @@ export class GameScene extends Phaser.Scene {
     if (pcell && pcell.adjacentCount > 0) {
       const idx = Math.min(pcell.adjacentCount, 8);
       this.cornerCount
-        .setPosition(player.col * cs + cs - 2, player.row * cs + 2)
+        .setPosition(px + cs / 2 - 2, py - cs / 2 + 2)
         .setText(String(pcell.adjacentCount))
         .setColor(NUM_COLORS[idx])
         .setVisible(true);
@@ -211,6 +273,14 @@ export class GameScene extends Phaser.Scene {
     this.msgText.setText(g.message).setColor(msgColor);
 
     this.restartHint.setVisible(g.status !== 'playing');
+
+    // Squad countdown
+    if (g.status === 'playing' && g.soldiers.length === 0 && g.playerMoved && g.squadTimer > 0) {
+      const secs = Math.ceil(g.squadTimer);
+      this.countdownText.setText(`Squad in ${secs}s`).setVisible(true);
+    } else {
+      this.countdownText.setVisible(false);
+    }
 
     // Charge pips
     const charges   = g.mistakes;

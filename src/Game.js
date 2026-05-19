@@ -1,6 +1,7 @@
 import { Grid } from './Grid.js';
 import { Player } from './Player.js';
-import { COLS } from './constants.js';
+import { Soldier } from './Soldier.js';
+import { COLS, ROWS } from './constants.js';
 import { getMineCount } from './settings.js';
 
 export class Game {
@@ -12,6 +13,9 @@ export class Game {
     this.mistakes = 3;
     this.status = 'playing';
     this.message = 'Navigate to the right. Use the numbers to avoid mines. Hold Shift to defuse.';
+    this.soldiers = [];
+    this.squadTimer = 30; // seconds until first soldier spawns
+    this.playerMoved = false;
     this.grid.at(this.player.col, this.player.row).revealed = true;
   }
 
@@ -22,6 +26,22 @@ export class Game {
     const cell = this.grid.at(col, row);
     if (!cell) return;
 
+    // Push soldier if standing in target cell
+    const soldier = this.soldiers.find(s => s.alive && s.col === col && s.row === row);
+    if (soldier) {
+      const pushCol = col + dc, pushRow = row + dr;
+      const pushCell = this.grid.at(pushCol, pushRow);
+      if (!pushCell) return; // wall blocks push
+      const blocked = this.soldiers.some(s => s !== soldier && s.alive && s.col === pushCol && s.row === pushRow);
+      if (blocked) return;
+      soldier.col = pushCol;
+      soldier.row = pushRow;
+      if (pushCell.hasMine && !pushCell.defused) {
+        soldier.alive = false;
+        this.message = 'You pushed a soldier onto a mine!';
+      }
+    }
+
     if (cell.hasMine && !cell.defused) {
       this.player.moveTo(col, row);
       this.status = 'lost';
@@ -29,12 +49,29 @@ export class Game {
       return;
     }
 
+    this.playerMoved = true;
     this.player.moveTo(col, row);
     cell.revealed = true;
 
     if (this.player.col >= COLS - 1) {
       this.status = 'won';
       this.message = 'Mission complete! You cleared a path through the minefield.';
+    }
+  }
+
+  update(dt) {
+    if (this.status !== 'playing') return;
+
+    if (this.soldiers.length === 0 && this.playerMoved) {
+      this.squadTimer -= dt;
+      if (this.squadTimer <= 0) {
+        this.soldiers.push(new Soldier(0, Math.floor(ROWS / 2)));
+        this.message = 'A soldier has entered the minefield!';
+      }
+    }
+
+    for (const soldier of this.soldiers) {
+      soldier.step(this, dt);
     }
   }
 
