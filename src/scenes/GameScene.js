@@ -22,11 +22,11 @@ export class GameScene extends Phaser.Scene {
     // One text object per cell for adjacency numbers / icons
     this.cellTexts = Array.from({ length: ROWS }, (_, r) =>
       Array.from({ length: COLS }, (_, c) =>
-        this.add.text(c * cs + cs - 3, r * cs + 3, '', {
+        this.add.text(c * cs + cs / 2, r * cs + cs / 2, '', {
           fontFamily: 'monospace',
-          fontSize: `${Math.floor(cs * 0.38)}px`,
+          fontSize: `${Math.floor(cs * 0.55)}px`,
           fontStyle: 'bold',
-        }).setOrigin(1, 0).setDepth(1).setVisible(false)
+        }).setOrigin(0.5, 0.5).setVisible(false)
       )
     );
 
@@ -37,6 +37,13 @@ export class GameScene extends Phaser.Scene {
       fontStyle: 'bold',
       color: '#000000',
     }).setOrigin(0.5, 0.5).setDepth(1);
+
+    // Corner count on the player's current cell
+    this.cornerCount = this.add.text(0, 0, '', {
+      fontFamily: 'monospace',
+      fontSize: `${Math.floor(cs * 0.32)}px`,
+      fontStyle: 'bold',
+    }).setOrigin(1, 0).setDepth(1).setVisible(false);
 
     // Status bar text objects
     this.modeText = this.add.text(14, barY + 10, '', {
@@ -151,12 +158,12 @@ export class GameScene extends Phaser.Scene {
         const t = this.cellTexts[r][c];
         if (cell.defused && cell.adjacentCount > 0) {
           const idx = Math.min(cell.adjacentCount, 8);
-          t.setText(String(cell.adjacentCount)).setColor(NUM_COLORS[idx]).setVisible(true);
+          t.setFontSize(Math.floor(cs * 0.55)).setText(String(cell.adjacentCount)).setColor(NUM_COLORS[idx]).setVisible(true);
         } else if (cell.defused) {
-          t.setText('✓').setColor('#4caf50').setVisible(true);
+          t.setFontSize(Math.floor(cs * 0.75)).setText('✓').setColor('#4caf50').setVisible(true);
         } else if (isGoal && !isCovered) {
           t.setText('▶').setColor('#6a9fd8').setVisible(true);
-        } else if (cell.revealed && !cell.hasMine && cell.adjacentCount > 0) {
+        } else if (cell.revealed && !cell.hasMine && !isPlayerHere && cell.adjacentCount > 0) {
           const idx = Math.min(cell.adjacentCount, 8);
           t.setText(String(cell.adjacentCount)).setColor(NUM_COLORS[idx]).setVisible(true);
         } else {
@@ -181,6 +188,19 @@ export class GameScene extends Phaser.Scene {
 
     const labelSize = g.status === 'lost' ? Math.floor(cs * 0.55) : Math.floor(cs * 0.32);
     this.playerLabel.setFontSize(labelSize).setPosition(px, py).setText(g.status === 'lost' ? '✕' : 'M');
+
+    // Corner count
+    const pcell = g.grid.at(player.col, player.row);
+    if (pcell && pcell.adjacentCount > 0) {
+      const idx = Math.min(pcell.adjacentCount, 8);
+      this.cornerCount
+        .setPosition(player.col * cs + cs - 2, player.row * cs + 2)
+        .setText(String(pcell.adjacentCount))
+        .setColor(NUM_COLORS[idx])
+        .setVisible(true);
+    } else {
+      this.cornerCount.setVisible(false);
+    }
 
     // --- Status bar ---
     const modeColor = g.status === 'lost' ? '#ff5252' : g.status === 'won' ? '#76ff03' : defuseMode ? '#ff8c00' : '#4caf50';
