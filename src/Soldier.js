@@ -29,6 +29,7 @@ export class Soldier {
     if (cell && cell.hasMine && !cell.defused) {
       this.alive = false;
       game.message = 'A soldier hit a mine! Clear a safer path.';
+      game.exploded = true;
       return;
     }
     if (this.col >= COLS - 1) {
@@ -67,7 +68,7 @@ export class Soldier {
         const k = key(nc, nr);
         if (parent.has(k)) continue;
         const cell = game.grid.at(nc, nr);
-        if (!cell || (!cell.revealed && !cell.defused)) continue;
+        if (!cell || cell.wall || (!cell.revealed && !cell.defused)) continue;
         parent.set(k, { col: node.col, row: node.row });
         if (nc > best.col || (nc === best.col && Math.abs(nr - this.row) < Math.abs(best.row - this.row))) {
           best = { col: nc, row: nr };
@@ -104,6 +105,8 @@ export class Soldier {
     ];
     for (const m of candidates) {
       if (m.col < 0 || m.col >= COLS || m.row < 0 || m.row >= ROWS) continue;
+      const mc = game.grid.at(m.col, m.row);
+      if (!mc || mc.wall) continue;
       if (this._isOccupied(game, m.col, m.row)) continue;
       return m;
     }

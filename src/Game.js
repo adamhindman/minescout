@@ -16,6 +16,7 @@ export class Game {
     this.soldiers = [];
     this.squadTimer = 30; // seconds until first soldier spawns
     this.playerMoved = false;
+    this.exploded = false;
     this.grid.at(this.player.col, this.player.row).revealed = true;
   }
 
@@ -24,7 +25,7 @@ export class Game {
 
     const { col, row } = this.player.targetCell(dc, dr);
     const cell = this.grid.at(col, row);
-    if (!cell) return;
+    if (!cell || cell.wall) return;
 
     // Push soldier if standing in target cell
     const soldier = this.soldiers.find(s => s.alive && s.col === col && s.row === row);
@@ -39,6 +40,7 @@ export class Game {
       if (pushCell.hasMine && !pushCell.defused) {
         soldier.alive = false;
         this.message = 'You pushed a soldier onto a mine!';
+        this.exploded = true;
       }
     }
 
@@ -46,6 +48,7 @@ export class Game {
       this.player.moveTo(col, row);
       this.status = 'lost';
       this.message = 'BOOM! You stepped on a mine. Mission failed.';
+      this.exploded = true;
       return;
     }
 
@@ -138,7 +141,7 @@ export class Game {
     if (this.status !== 'playing' || !this.defuseMode) return;
 
     const cell = this.grid.at(col, row);
-    if (!cell) return;
+    if (!cell || cell.wall) return;
 
     if (!this.player.isAdjacentTo(col, row)) {
       this.message = 'Out of range — move adjacent to the target first.';
