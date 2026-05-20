@@ -20,6 +20,7 @@ export class Grid {
     this._placeWalls();
     this._placeMines(mineCount);
     this._computeAdjacency();
+    this._placeKey();
   }
 
   _isSafeZone(col, row) {
@@ -56,16 +57,33 @@ export class Grid {
   }
 
   _placeMines(mineCount) {
+    const doorRow = Math.floor(ROWS / 2);
     let placed = 0;
     while (placed < mineCount) {
-      const col = Math.floor(Math.random() * (COLS - 1)); // exclude goal col
+      const col = Math.floor(Math.random() * COLS);
       const row = Math.floor(Math.random() * ROWS);
       if (this._isSafeZone(col, row)) continue;
+      if (col === COLS - 1 && row === doorRow) continue;
       const cell = this.cells[row][col];
       if (cell.wall || cell.hasMine) continue;
       cell.hasMine = true;
       placed++;
     }
+  }
+
+  _placeKey() {
+    const candidates = [];
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = Math.floor(COLS / 2); c < COLS - 1; c++) {
+        if (this._isSafeZone(c, r)) continue;
+        const cell = this.cells[r][c];
+        if (cell.wall || cell.hasMine) continue;
+        candidates.push({ c, r });
+      }
+    }
+    const idx = Math.floor(Math.random() * candidates.length);
+    this.keyCol = candidates[idx].c;
+    this.keyRow = candidates[idx].r;
   }
 
   _computeAdjacency() {
