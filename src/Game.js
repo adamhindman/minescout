@@ -1,6 +1,6 @@
 import { Grid } from "./Grid.js";
 import { Player } from "./Player.js";
-import { Soldier } from "./Soldier.js";
+import { MonsterTank } from "./MonsterTank.js";
 import { COLS, ROWS } from "./constants.js";
 import { getMineCount } from "./settings.js";
 
@@ -14,10 +14,11 @@ export class Game {
     this.status = "playing";
     this.message =
       "Navigate to the right. Use the numbers to avoid mines. Hold Shift to defuse.";
-    this.soldiers = [];
-    this.squadTimer = 30; // seconds until first soldier spawns
+    this.hasKey = false;
+    this.tanks = [];
+    this.squadTimer = 30;
     this.playerMoved = false;
-    this.exploded = false;
+    this.exploded = null; // { col, row } when a mine fires, null otherwise
     this.grid.at(this.player.col, this.player.row).revealed = true;
   }
 
@@ -28,27 +29,14 @@ export class Game {
     const cell = this.grid.at(col, row);
     if (!cell || cell.wall) return;
 
-    // Push soldier if standing in target cell
-    const soldier = this.soldiers.find(
-      (s) => s.alive && s.col === col && s.row === row,
+    const monster = this.tanks.find(
+      (mt) => mt.alive && mt.col === col && mt.row === row,
     );
-    if (soldier) {
-      const pushCol = col + dc,
-        pushRow = row + dr;
-      const pushCell = this.grid.at(pushCol, pushRow);
-      if (!pushCell) return; // wall blocks push
-      const blocked = this.soldiers.some(
-        (s) =>
-          s !== soldier && s.alive && s.col === pushCol && s.row === pushRow,
-      );
-      if (blocked) return;
-      soldier.col = pushCol;
-      soldier.row = pushRow;
-      if (pushCell.hasMine && !pushCell.defused) {
-        soldier.alive = false;
-        this.message = "You pushed a soldier onto a mine!";
-        this.exploded = true;
-      }
+    if (monster) {
+      this.player.moveTo(col, row);
+      this.status = 'lost';
+      this.message = 'You drove into the monster tank!';
+      return;
     }
 
     if (cell.hasMine && !cell.defused) {
@@ -56,7 +44,7 @@ export class Game {
       this.status = "lost";
       this.message =
         "BOOM! You blundered onto a mine. Mission failed, war lost.";
-      this.exploded = true;
+      this.exploded = { col, row };
       return;
     }
 
@@ -64,26 +52,34 @@ export class Game {
     this.player.moveTo(col, row);
     cell.revealed = true;
 
-    if (this.player.col >= COLS - 1) {
-      this.status = "won";
-      this.message =
-        "Mission complete! You cleared a path through the minefield.";
+    if (!this.hasKey && this.player.col === this.grid.keyCol && this.player.row === this.grid.keyRow) {
+      this.hasKey = true;
+      this.grid.keyCol = -1;
+      this.grid.keyRow = -1;
+      this.message = "You found the key! Reach the door on the right!";
+    } else if (this.player.col === COLS - 1 && this.player.row === Math.floor(ROWS / 2)) {
+      if (this.hasKey) {
+        this.status = "won";
+        this.message = "Mission complete! You escaped with the key!";
+      } else {
+        this.message = "The door is locked — find the key first!";
+      }
     }
   }
 
   update(dt) {
     if (this.status === "lost") return;
 
-    if (this.status === 'playing' && this.soldiers.length === 0 && this.playerMoved) {
+    if (this.status === 'playing' && this.tanks.length === 0 && this.playerMoved) {
       this.squadTimer -= dt;
       if (this.squadTimer <= 0) {
-        this.soldiers.push(new Soldier(0, Math.floor(ROWS / 2)));
-        this.message = "A soldier has entered the minefield!";
+        this.tanks.push(new MonsterTank(0, Math.floor(ROWS / 2)));
+        this.message = "A tank has entered the minefield!";
       }
     }
 
-    for (const soldier of this.soldiers) {
-      soldier.step(this, dt);
+    for (const mt of this.tanks) {
+      mt.step(this, dt);
     }
   }
 
