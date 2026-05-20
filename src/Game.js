@@ -129,7 +129,7 @@ export class Game {
       const col = this.player.col + dk_dc;
       const row = this.player.row + dk_dr;
       const c = this.grid.at(col, row);
-      if (c && !c.wall && this.player.isAdjacentTo(col, row)) {
+      if (c && this.player.isAdjacentTo(col, row)) {
         this.defuseCursor = { col, row };
       }
       return;
@@ -142,7 +142,7 @@ export class Game {
     const col = this.player.col + new_dc;
     const row = this.player.row + new_dr;
     const nc = this.grid.at(col, row);
-    if (nc && !nc.wall) this.defuseCursor = { col, row };
+    if (nc) this.defuseCursor = { col, row };
   }
 
   confirmDefuse() {
@@ -154,7 +154,13 @@ export class Game {
     if (this.status !== "playing" || !this.defuseMode) return;
 
     const cell = this.grid.at(col, row);
-    if (!cell || cell.wall) return;
+    if (!cell) return;
+    if (cell.wall) {
+      this.defuseMode = false;
+      this.defuseCursor = null;
+      this.message = "That's a wall — nothing to defuse.";
+      return;
+    }
 
     if (!this.player.isAdjacentTo(col, row)) {
       this.message = "Out of range — move adjacent to the target first.";
