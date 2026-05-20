@@ -27,7 +27,7 @@ picker.addEventListener('input', () => {
 });
 
 picker.addEventListener('change', () => {
-  const v = Math.max(5, Math.min(150, parseInt(picker.value, 10) || 55));
+  const v = Math.max(0, Math.min(250, parseInt(picker.value, 10) || 0));
   picker.value = v;
   setMineCount(v);
   phaserGame.scene.getScene('GameScene').scene.restart();

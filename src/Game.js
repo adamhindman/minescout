@@ -35,8 +35,8 @@ export class Game {
     );
     if (monster) {
       this.player.moveTo(col, row);
-      this.status = 'lost';
-      this.message = 'You drove into the monster tank!';
+      this.status = "lost";
+      this.message = "You drove into the monster tank!";
       return;
     }
 
@@ -53,15 +53,30 @@ export class Game {
     this.player.moveTo(col, row);
     cell.revealed = true;
 
-    if (!this.hasKey && this.player.col === this.grid.keyCol && this.player.row === this.grid.keyRow) {
+    if (
+      !this.hasKey &&
+      this.player.col === this.grid.keyCol &&
+      this.player.row === this.grid.keyRow
+    ) {
       this.hasKey = true;
       this.grid.keyCol = -1;
       this.grid.keyRow = -1;
       this.message = "You found the key! Reach the door on the right!";
-    } else if (this.player.col === COLS - 1 && this.player.row === Math.floor(ROWS / 2)) {
+    } else if (
+      this.player.col === COLS - 1 &&
+      this.player.row === Math.floor(ROWS / 2)
+    ) {
       if (this.hasKey) {
         this.status = "won";
-        this.message = "Mission complete! You escaped with the key!";
+        const livingTank = this.tanks.find((mt) => mt.alive);
+        if (livingTank) {
+          livingTank.alive = false;
+          this.exploded = { col: livingTank.col, row: livingTank.row };
+          this.message =
+            "You win! Seeing your victory, the tank self-destructs out of shame.";
+        } else {
+          this.message = "Mission complete! You escaped with the key!";
+        }
       } else {
         this.message = "The door is locked — find the key first!";
       }
@@ -71,7 +86,12 @@ export class Game {
   update(dt) {
     if (this.status === "lost") return;
 
-    if (this.tankEnabled && this.status === 'playing' && this.tanks.length === 0 && this.playerMoved) {
+    if (
+      this.tankEnabled &&
+      this.status === "playing" &&
+      this.tanks.length === 0 &&
+      this.playerMoved
+    ) {
       this.squadTimer -= dt;
       if (this.squadTimer <= 0) {
         this.tanks.push(new MonsterTank(0, Math.floor(ROWS / 2)));
@@ -119,7 +139,8 @@ export class Game {
       const col = this.player.col + dc;
       const row = this.player.row + dr;
       const cell = this.grid.at(col, row);
-      if (cell && !cell.wall && !cell.revealed && !cell.defused) return { col, row };
+      if (cell && !cell.wall && !cell.revealed && !cell.defused)
+        return { col, row };
     }
     return null;
   }

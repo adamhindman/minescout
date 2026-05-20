@@ -72,6 +72,8 @@ export class Renderer {
     this._displayPos = new WeakMap();
     this._ghostPos = null;
     this._ghostTimer = 0;
+    this._tankFlash = null; // { timer } while flashing, null otherwise
+    this.flashGfx = scene.add.graphics().setDepth(3);
   }
 
   render(game, dt) {
@@ -193,14 +195,6 @@ export class Renderer {
     for (const mt of game.tanks) {
       if (!mt.alive) continue;
 
-      // Vision cone overlay
-      const alpha = mt.state === 'chase' ? 0.28 : 0.15;
-      gfx.fillStyle(0xff0000, alpha);
-      const visionCells = mt.getVisionCells(game);
-      for (const { col, row } of visionCells) {
-        gfx.fillRect(col * cs, row * cs, cs, cs);
-      }
-
       // Interpolate display position
       const targetX = mt.col * cs + cs / 2;
       const targetY = mt.row * cs + cs / 2;
@@ -213,7 +207,23 @@ export class Renderer {
       if (dist <= step) { pos.x = targetX; pos.y = targetY; }
       else { pos.x += (dx / dist) * step; pos.y += (dy / dist) * step; }
 
-      const tint = mt.state === 'chase' ? 0xff1111 : mt.state === 'search' ? 0xff7700 : 0xff4444;
+      if (mt.justDetected) {
+        mt.justDetected = false;
+        this._tankFlash = { timer: 0 };
+      }
+      if (this._tankFlash) {
+        this._tankFlash.timer += dt;
+        if (this._tankFlash.timer >= 0.6) this._tankFlash = null;
+      }
+
+      // Flash overlay: bright red rect drawn above sprite, 3 × 0.2s pulses
+      this.flashGfx.clear();
+      if (this._tankFlash && (this._tankFlash.timer % 0.2) < 0.1) {
+        this.flashGfx.fillStyle(0xff2200, 0.85);
+        this.flashGfx.fillRect(pos.x - cs * 0.475, pos.y - cs * 0.475, cs * 0.95, cs * 0.95);
+      }
+
+      const tint = mt.state === 'chase' ? 0xff1111 : 0xff4444;
       this.monsterSprite
         .setTexture(`tank-${mt.facing}`)
         .setPosition(pos.x, pos.y)
@@ -223,7 +233,10 @@ export class Renderer {
       rendered = true;
     }
 
-    if (!rendered) this.monsterSprite.setVisible(false);
+    if (!rendered) {
+      this.monsterSprite.setVisible(false);
+      this.flashGfx.clear();
+    }
   }
 
   _renderPlayer(game, gfx, player, defuseMode, dt) {

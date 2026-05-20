@@ -1,7 +1,7 @@
 import { COLS, ROWS } from './constants.js';
 
 const MOVE_INTERVAL = 1.2;
-const VISION_RANGE = 8;
+const VISION_RANGE = 3;
 
 const DIRS = {
   right: [1, 0],
@@ -25,6 +25,7 @@ export class MonsterTank {
     this.facing = 'right';
     this.state = 'patrol'; // 'patrol' | 'chase'
     this.lastSeenPlayer = null;
+    this.justDetected = false;
     this.patrolTarget = null;
     this.moveTimer = 0;
     this.MOVE_INTERVAL = MOVE_INTERVAL;
@@ -44,6 +45,7 @@ export class MonsterTank {
 
   _updateVision(game) {
     if (this._canSeePlayer(game)) {
+      if (this.state !== 'chase') this.justDetected = true;
       this.state = 'chase';
       this.lastSeenPlayer = { col: game.player.col, row: game.player.row };
     }
@@ -55,10 +57,9 @@ export class MonsterTank {
     const relR = game.player.row - this.row;
     const dot = relC * dc + relR * dr;
     if (dot <= 0) return false;
+    if (dot > VISION_RANGE) return false;
     const perp = Math.abs(relC * dr - relR * dc);
-    if (perp > dot) return false;
-    const dist = Math.abs(relC) + Math.abs(relR);
-    if (dist > VISION_RANGE) return false;
+    if (perp >= dot) return false;
     return this._hasLineOfSight(game, this.col, this.row, game.player.col, game.player.row);
   }
 
@@ -192,10 +193,9 @@ export class MonsterTank {
       for (let relR = -VISION_RANGE; relR <= VISION_RANGE; relR++) {
         const dot = relC * dc + relR * dr;
         if (dot <= 0) continue;
+        if (dot > VISION_RANGE) continue;
         const perp = Math.abs(relC * dr - relR * dc);
-        if (perp > dot) continue;
-        const dist = Math.abs(relC) + Math.abs(relR);
-        if (dist > VISION_RANGE) continue;
+        if (perp >= dot) continue;
         const tc = this.col + relC, tr = this.row + relR;
         if (tc < 0 || tc >= COLS || tr < 0 || tr >= ROWS) continue;
         if (!this._hasLineOfSight(game, this.col, this.row, tc, tr)) continue;
