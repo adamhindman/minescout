@@ -98,7 +98,7 @@ export class Renderer {
         if (this._ghostTimer >= 2) this._ghostTimer -= 2;
         this._ghostPos = { ..._mt.lastSeenPlayer };
       }
-    } else if (_mt) {
+    } else {
       this._ghostPos = null;
       this._ghostTimer = 0;
     }
@@ -235,7 +235,7 @@ export class Renderer {
       gfx.fillCircle(gx, gy, pr);
       gfx.lineStyle(1.5, 0xffffff, 0.35);
       gfx.strokeCircle(gx, gy, pr);
-      this.ghostLabel.setPosition(gx, gy).setVisible(true);
+      this.ghostLabel.setVisible(false);
     } else {
       this.ghostLabel.setVisible(false);
     }
@@ -295,7 +295,7 @@ export class Renderer {
 
     this.restartHint.setVisible(game.status !== 'playing');
 
-    if (game.status === 'playing' && game.playerMoved && game.tanks.length === 0 && game.squadTimer > 0) {
+    if (game.tankEnabled && game.status === 'playing' && game.playerMoved && game.tanks.length === 0 && game.squadTimer > 0) {
       this.countdownText.setText(`Tank arrives in ${Math.ceil(game.squadTimer)}s`).setVisible(true);
     } else {
       this.countdownText.setVisible(false);

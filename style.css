@@ -58,3 +58,31 @@ canvas {
 #difficulty input:focus {
   border-color: #4caf50;
 }
+
+#tank-toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 10px;
+  padding-left: 14px;
+  border-left: 1px solid #1a3a1a;
+}
+
+button.toggle {
+  background: #0f1a0f;
+  border: 1px solid #1a3a1a;
+  color: #4caf50;
+  font-family: monospace;
+  font-size: 13px;
+  letter-spacing: 2px;
+  padding: 4px 10px;
+  cursor: pointer;
+  outline: none;
+  min-width: 44px;
+  text-align: center;
+}
+
+button.toggle[aria-pressed="false"] {
+  color: #555;
+  border-color: #1a2a1a;
+}

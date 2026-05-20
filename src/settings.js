@@ -1,5 +1,6 @@
 const KEY       = 'minescout_mine_count';
 const TS_KEY    = 'minescout_saved_at';
+const TANK_KEY  = 'minescout_tank_enabled';
 const DEFAULT   = 34;
 // Bump this date to invalidate all stored settings older than it
 const INVALIDATE_BEFORE = '2026-05-19T15:26';
@@ -21,4 +22,13 @@ export function getMineCount() {
 export function setMineCount(n) {
   localStorage.setItem(KEY, String(n));
   localStorage.setItem(TS_KEY, new Date().toISOString().slice(0, 16));
+}
+
+export function getTankEnabled() {
+  const v = localStorage.getItem(TANK_KEY);
+  return v === null ? true : v === 'true';
+}
+
+export function setTankEnabled(enabled) {
+  localStorage.setItem(TANK_KEY, String(enabled));
 }

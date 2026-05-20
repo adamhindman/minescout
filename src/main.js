@@ -1,10 +1,17 @@
 import Phaser from 'phaser';
 import { GameScene } from './scenes/GameScene.js';
 import { COLS, ROWS, CELL_SIZE, STATUS_BAR_H } from './constants.js';
-import { getMineCount, setMineCount } from './settings.js';
+import { getMineCount, setMineCount, getTankEnabled, setTankEnabled } from './settings.js';
 
 const picker = document.getElementById('mineCount');
 picker.value = getMineCount();
+
+const tankToggle = document.getElementById('tankToggle');
+function applyTankToggle(enabled) {
+  tankToggle.textContent = enabled ? 'ON' : 'OFF';
+  tankToggle.setAttribute('aria-pressed', String(enabled));
+}
+applyTankToggle(getTankEnabled());
 
 const phaserGame = new Phaser.Game({
   type: Phaser.CANVAS,
@@ -24,4 +31,20 @@ picker.addEventListener('change', () => {
   picker.value = v;
   setMineCount(v);
   phaserGame.scene.getScene('GameScene').scene.restart();
+});
+
+tankToggle.addEventListener('click', () => {
+  const enabled = !getTankEnabled();
+  setTankEnabled(enabled);
+  applyTankToggle(enabled);
+  const scene = phaserGame.scene.getScene('GameScene');
+  if (scene && scene.gs) {
+    scene.gs.tankEnabled = enabled;
+    if (enabled) {
+      scene.gs.playerMoved = false;
+      scene.gs.squadTimer = 30;
+    } else {
+      scene.gs.tanks = [];
+    }
+  }
 });

@@ -2,7 +2,7 @@ import { Grid } from "./Grid.js";
 import { Player } from "./Player.js";
 import { MonsterTank } from "./MonsterTank.js";
 import { COLS, ROWS } from "./constants.js";
-import { getMineCount } from "./settings.js";
+import { getMineCount, getTankEnabled } from "./settings.js";
 
 export class Game {
   constructor() {
@@ -15,6 +15,7 @@ export class Game {
     this.message =
       "Navigate to the right. Use the numbers to avoid mines. Hold Shift to defuse.";
     this.hasKey = false;
+    this.tankEnabled = getTankEnabled();
     this.tanks = [];
     this.squadTimer = 30;
     this.playerMoved = false;
@@ -70,7 +71,7 @@ export class Game {
   update(dt) {
     if (this.status === "lost") return;
 
-    if (this.status === 'playing' && this.tanks.length === 0 && this.playerMoved) {
+    if (this.tankEnabled && this.status === 'playing' && this.tanks.length === 0 && this.playerMoved) {
       this.squadTimer -= dt;
       if (this.squadTimer <= 0) {
         this.tanks.push(new MonsterTank(0, Math.floor(ROWS / 2)));
