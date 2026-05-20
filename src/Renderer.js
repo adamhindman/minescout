@@ -93,9 +93,14 @@ export class Renderer {
 
     this._ghostTimer += dt;
     const _mt = game.tanks[0];
-    if (_mt && _mt.lastSeenPlayer && (this._ghostPos === null || this._ghostTimer >= 2)) {
-      if (this._ghostTimer >= 2) this._ghostTimer -= 2;
-      this._ghostPos = { ..._mt.lastSeenPlayer };
+    if (_mt && _mt.lastSeenPlayer) {
+      if (this._ghostPos === null || this._ghostTimer >= 2) {
+        if (this._ghostTimer >= 2) this._ghostTimer -= 2;
+        this._ghostPos = { ..._mt.lastSeenPlayer };
+      }
+    } else if (_mt) {
+      this._ghostPos = null;
+      this._ghostTimer = 0;
     }
 
     this._renderCells(game, gfx, player, defuseMode, defuseCursor);
