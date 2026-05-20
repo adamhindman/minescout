@@ -30,7 +30,6 @@ picker.addEventListener('change', () => {
   const v = Math.max(0, Math.min(250, parseInt(picker.value, 10) || 0));
   picker.value = v;
   setMineCount(v);
-  phaserGame.scene.getScene('GameScene').scene.restart();
 });
 
 tankToggle.addEventListener('click', () => {
