@@ -1,7 +1,7 @@
 import { COLS, ROWS } from './constants.js';
 
 const MOVE_INTERVAL = 1.2;
-const VISION_RANGE = 3;
+const VISION_RANGE = 8;
 
 const DIRS = {
   right: [1, 0],
@@ -19,6 +19,7 @@ function dirToFacing(dc, dr) {
 
 export class MonsterTank {
   constructor(col, row) {
+    this.type = 'tank';
     this.col = col;
     this.row = row;
     this.alive = true;
@@ -75,6 +76,7 @@ export class MonsterTank {
       if (x === c1 && y === r1) break;
       const cell = game.grid.at(x, y);
       if (!cell || cell.wall) return false;
+      if (!cell.revealed && !cell.defused) return false;
     }
     return true;
   }

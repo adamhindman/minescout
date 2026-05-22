@@ -1,6 +1,7 @@
 import { Grid } from "./Grid.js";
 import { Player } from "./Player.js";
 import { MonsterTank } from "./MonsterTank.js";
+import { Bouncer } from "./Bouncer.js";
 import { COLS, ROWS } from "./constants.js";
 import { getMineCount, getTankEnabled } from "./settings.js";
 
@@ -16,11 +17,13 @@ export class Game {
       "Navigate to the right. Use the numbers to avoid mines. Hold Shift to defuse.";
     this.hasKey = false;
     this.tankEnabled = getTankEnabled();
-    this.tanks = [];
-    this.squadTimer = 30;
+    this.enemies = [];
+    this.enemyType = Math.random() < 0.5 ? 'tank' : 'bouncer';
+    this.squadTimer = Math.floor(30 + (getMineCount() / 250) * 30);
     this.playerMoved = false;
     this.exploded = null; // { col, row } when a mine fires, null otherwise
     this.grid.at(this.player.col, this.player.row).revealed = true;
+    this.grid.at(COLS - 1, Math.floor(ROWS / 2)).revealed = true;
   }
 
   move(dc, dr) {
@@ -30,13 +33,15 @@ export class Game {
     const cell = this.grid.at(col, row);
     if (!cell || cell.wall) return;
 
-    const monster = this.tanks.find(
-      (mt) => mt.alive && mt.col === col && mt.row === row,
+    const enemy = this.enemies.find(
+      (e) => e.alive && e.col === col && e.row === row,
     );
-    if (monster) {
+    if (enemy) {
       this.player.moveTo(col, row);
       this.status = "lost";
-      this.message = "You drove into the monster tank!";
+      this.message = enemy.type === 'bouncer'
+        ? "You ran straight into the bouncer!"
+        : "You drove into the monster tank!";
       return;
     }
 
@@ -68,12 +73,16 @@ export class Game {
     ) {
       if (this.hasKey) {
         this.status = "won";
-        const livingTank = this.tanks.find((mt) => mt.alive);
-        if (livingTank) {
-          livingTank.alive = false;
-          this.exploded = { col: livingTank.col, row: livingTank.row };
+        const livingEnemy = this.enemies.find((e) => e.alive);
+        if (livingEnemy && livingEnemy.type === 'tank') {
+          livingEnemy.alive = false;
+          this.exploded = { col: livingEnemy.col, row: livingEnemy.row };
           this.message =
             "You win! Seeing your victory, the tank self-destructs out of shame.";
+        } else if (livingEnemy && livingEnemy.type === 'bouncer') {
+          livingEnemy.alive = false;
+          this.message =
+            "You win! The bouncer rolls off with a sad… boing!";
         } else {
           this.message = "Mission complete! You escaped with the key!";
         }
@@ -89,18 +98,24 @@ export class Game {
     if (
       this.tankEnabled &&
       this.status === "playing" &&
-      this.tanks.length === 0 &&
+      this.enemies.length === 0 &&
       this.playerMoved
     ) {
       this.squadTimer -= dt;
       if (this.squadTimer <= 0) {
-        this.tanks.push(new MonsterTank(0, Math.floor(ROWS / 2)));
-        this.message = "A tank has entered the minefield!";
+        const midRow = Math.floor(ROWS / 2);
+        if (this.enemyType === 'bouncer') {
+          this.enemies.push(new Bouncer(0, midRow));
+          this.message = "A bouncer is loose in the minefield!";
+        } else {
+          this.enemies.push(new MonsterTank(0, midRow));
+          this.message = "A tank has entered the minefield!";
+        }
       }
     }
 
-    for (const mt of this.tanks) {
-      mt.step(this, dt);
+    for (const e of this.enemies) {
+      e.step(this, dt);
     }
   }
 

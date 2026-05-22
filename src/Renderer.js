@@ -94,7 +94,7 @@ export class Renderer {
     gfx.strokePath();
 
     this._ghostTimer += dt;
-    const _mt = game.tanks[0];
+    const _mt = game.enemies.find((e) => e.type === 'tank');
     if (_mt && _mt.lastSeenPlayer) {
       if (this._ghostPos === null || this._ghostTimer >= 2) {
         if (this._ghostTimer >= 2) this._ghostTimer -= 2;
@@ -108,6 +108,7 @@ export class Renderer {
     this._renderCells(game, gfx, player, defuseMode, defuseCursor);
     this._renderWalls(game, gfx);
     this._renderMonsterTanks(game, gfx, dt);
+    this._renderBouncers(game, gfx, dt);
     this._renderPlayer(game, gfx, player, defuseMode, dt);
     this._renderStatusBar(game, defuseMode);
   }
@@ -192,8 +193,8 @@ export class Renderer {
   _renderMonsterTanks(game, gfx, dt) {
     let rendered = false;
 
-    for (const mt of game.tanks) {
-      if (!mt.alive) continue;
+    for (const mt of game.enemies) {
+      if (mt.type !== 'tank' || !mt.alive) continue;
 
       // Interpolate display position
       const targetX = mt.col * cs + cs / 2;
@@ -236,6 +237,33 @@ export class Renderer {
     if (!rendered) {
       this.monsterSprite.setVisible(false);
       this.flashGfx.clear();
+    }
+  }
+
+  _renderBouncers(game, gfx, dt) {
+    for (const b of game.enemies) {
+      if (b.type !== 'bouncer' || !b.alive) continue;
+
+      const targetX = b.col * cs + cs / 2;
+      const targetY = b.row * cs + cs / 2;
+      const pos = this._getDisplayPos(b, targetX, targetY);
+      const dx = targetX - pos.x;
+      const dy = targetY - pos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const step = (cs / b.MOVE_INTERVAL) * dt;
+      if (dist <= step) { pos.x = targetX; pos.y = targetY; }
+      else { pos.x += (dx / dist) * step; pos.y += (dy / dist) * step; }
+
+      const br = cs * 0.32;
+      gfx.fillStyle(0x000000, 0.4);
+      gfx.fillEllipse(pos.x + 2, pos.y + 3, br * 2, br);
+
+      gfx.fillStyle(0xd32f2f);
+      gfx.fillCircle(pos.x, pos.y, br);
+      gfx.fillStyle(0xff6e6e, 0.65);
+      gfx.fillCircle(pos.x - br * 0.3, pos.y - br * 0.3, br * 0.35);
+      gfx.lineStyle(1.5, 0x4a0000, 0.8);
+      gfx.strokeCircle(pos.x, pos.y, br);
     }
   }
 
@@ -308,8 +336,9 @@ export class Renderer {
 
     this.restartHint.setVisible(game.status !== 'playing');
 
-    if (game.tankEnabled && game.status === 'playing' && game.playerMoved && game.tanks.length === 0 && game.squadTimer > 0) {
-      this.countdownText.setText(`Tank arrives in ${Math.ceil(game.squadTimer)}s`).setVisible(true);
+    if (game.tankEnabled && game.status === 'playing' && game.playerMoved && game.enemies.length === 0 && game.squadTimer > 0) {
+      const label = game.enemyType === 'bouncer' ? 'Bouncer' : 'Tank';
+      this.countdownText.setText(`${label} arrives in ${Math.ceil(game.squadTimer)}s`).setVisible(true);
     } else {
       this.countdownText.setVisible(false);
     }
