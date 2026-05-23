@@ -72,10 +72,14 @@ export class Grid {
   }
 
   _placeKey() {
+    const doorRow = Math.floor(ROWS / 2);
+    const startCol = 0;
+    const startRow = Math.floor(ROWS / 2);
     const candidates = [];
     for (let r = 0; r < ROWS; r++) {
-      for (let c = Math.floor(COLS / 2); c < COLS - 1; c++) {
-        if (this._isSafeZone(c, r)) continue;
+      for (let c = 0; c < COLS; c++) {
+        if (c === COLS - 1 && r === doorRow) continue;
+        if (Math.max(Math.abs(c - startCol), Math.abs(r - startRow)) <= 4) continue;
         const cell = this.cells[r][c];
         if (cell.wall || cell.hasMine) continue;
         candidates.push({ c, r });

@@ -41,9 +41,9 @@ tankToggle.addEventListener('click', () => {
     scene.gs.tankEnabled = enabled;
     if (enabled) {
       scene.gs.playerMoved = false;
-      scene.gs.squadTimer = 30;
+      scene.gs.squadTimer = Math.floor(30 + (getMineCount() / 250) * 30);
     } else {
-      scene.gs.tanks = [];
+      scene.gs.enemies = [];
     }
   }
 });
