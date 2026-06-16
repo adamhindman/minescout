@@ -1,5 +1,7 @@
 # Minescout
 
+https://github.com/adamhindman/minescout
+
 A minesweeper-inspired game where you physically control a scout navigating a minefield. Move from the left edge to the right edge without getting blown up.
 
 ## How to play
